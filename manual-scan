@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+import logging
+
+from argparse import ArgumentParser
+from lib.worker import Worker
+from lib.results import Results
+
+
+if __name__ == '__main__':
+    parser = ArgumentParser()
+    parser.add_argument('--host', type=str, required=True)
+    parser.add_argument('--threads', type=int, default=200)
+    parser.add_argument('--timeout', type=int, default=5)
+    parser.add_argument('--verbose', action='store_true')
+    args = parser.parse_args()
+
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        level=(logging.DEBUG if args.verbose else logging.INFO))
+
+    results = Results()
+    worker = Worker(args.host, args.host, [],
+                    concurrency=args.threads,
+                    timeout=args.timeout)
+    worker.start()
+    worker.join()
+
+    results.add(worker)

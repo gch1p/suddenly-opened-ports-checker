@@ -5,96 +5,10 @@ import math
 
 from pprint import pprint
 from argparse import ArgumentParser
-from ch1p import telegram_notify
-from threading import Thread, Lock
-from html import escape
-from scanner import TCPScanner, PortState
+from lib.worker import Worker
+from lib.results import Results
 
-mutex = Lock()
 logger = logging.getLogger(__name__)
-
-
-class Colored:
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    END = '\033[0m'
-
-
-class Results:
-    def __init__(self):
-        self.warnings = []
-        self.mutex = Lock()
-
-    def add(self, worker):
-        host = worker.get_host()
-        with self.mutex:
-            if not worker.done:
-                print(f'{Colored.RED}{worker.name}: scanning failed{Colored.END}')
-                return
-
-            print(f'{worker.name} ({host}):')
-
-            opened = []
-            results = worker.get_results()
-            for port, state in results:
-                if state != PortState.OPEN:
-                    continue
-
-                opened.append(port)
-                if not worker.is_expected(port):
-                    self.warnings.append(f'<b>{worker.name}</b> ({host}): port {port} is open')
-                    print(f'    {Colored.RED}{port} opened{Colored.END}')
-                else:
-                    print(f'    {Colored.GREEN}{port} opened{Colored.END}')
-
-            if worker.opened:
-                for port in worker.opened:
-                    if port not in opened:
-                        self.warnings.append(
-                            f'<b>{worker.name}</b> ({host}): port {port} is NOT open')
-                        print(f'    {Colored.RED}{port} not opened{Colored.END}')
-            print()
-
-    def has_warnings(self):
-        return len(self.warnings) > 0
-
-    def notify(self, chat_id=None, token=None):
-        text = '<b>❗️Attention!</b>\n\n'
-        text += '\n'.join(self.warnings)
-
-        telegram_notify(text, parse_mode='html', chat_id=chat_id, token=token)
-
-
-class Worker(Thread):
-    def __init__(self, name, host, opened=None, concurrency=None, timeout=None):
-        Thread.__init__(self)
-
-        assert concurrency is not None
-
-        self.done = False
-        self.name = name
-        self.concurrency = concurrency
-        self.opened = opened
-
-        scanner_kw = {}
-        if timeout is not None:
-            scanner_kw['timeout'] = timeout
-        self.scanner = TCPScanner(host, range(0, 65535), **scanner_kw)
-
-    def run(self):
-        logger.info(f'starting {self.name} ({self.concurrency} threads)')
-        self.scanner.scan(num_threads=self.concurrency)
-        self.done = not self.scanner.failed
-        logger.info(f'finished {self.name}')
-
-    def get_results(self):
-        return self.scanner.results
-
-    def is_expected(self, port):
-        return (self.opened is not None) and (port in self.opened)
-
-    def get_host(self):
-        return self.scanner.host
 
 
 def main():
@@ -113,7 +27,7 @@ def main():
                         help='just print results, don\'t send to telegram')
     args = parser.parse_args()
 
-    # setup loggign
+    # setup logging
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         level=(logging.DEBUG if args.verbose else logging.INFO))
 
