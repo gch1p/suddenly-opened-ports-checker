@@ -38,19 +38,21 @@ class TCPScanner:
             t.join()
 
     def run(self):
-        try:
-            while True:
-                if self.failed:
-                    break
+        while True:
+            if self.failed:
+                break
 
-                try:
-                    self._scan(self.q.get(block=False))
-                except Exception as e:
-                    logger.exception(e)
-                    self.failed = True
-                    break
-        except queue.Empty:
-            return
+            try:
+                port = self.q.get(block=False)
+            except queue.Empty:
+                break
+
+            try:
+                self._scan(port)
+            except Exception as e:
+                logger.exception(e)
+                self.failed = True
+                break
 
     def _scan(self, port):
         try:
