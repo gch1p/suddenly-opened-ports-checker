@@ -3,6 +3,7 @@ import logging
 import yaml
 import math
 
+from pprint import pprint
 from argparse import ArgumentParser
 from ch1p import telegram_notify
 from threading import Thread, Lock
@@ -41,7 +42,7 @@ class Results:
 
                 opened.append(port)
                 if not worker.is_expected(port):
-                    self.warnings.append(f'On {worker.name} ({host}): port {port} is open')
+                    self.warnings.append(f'<b>{worker.name}</b> ({host}): port {port} is open')
                     print(f'    {Colored.RED}{port} opened{Colored.END}')
                 else:
                     print(f'    {Colored.GREEN}{port} opened{Colored.END}')
@@ -50,15 +51,18 @@ class Results:
                 for port in worker.opened:
                     if port not in opened:
                         self.warnings.append(
-                            f'On {worker.name} ({host}): port {port} expected to be opened, but it\'s not')
+                            f'<b>{worker.name}</b> ({host}): port {port} is NOT open')
                         print(f'    {Colored.RED}{port} not opened{Colored.END}')
             print()
 
     def has_warnings(self):
         return len(self.warnings) > 0
 
-    def notify(self):
-        telegram_notify(escape('\n'.join(self.warnings)), parse_mode='html')
+    def notify(self, chat_id=None, token=None):
+        text = '<b>❗️ Attention!</b>\n\n'
+        text += '\n'.join(self.warnings)
+
+        telegram_notify(text, parse_mode='html', chat_id=chat_id, token=token)
 
 
 class Worker(Thread):
@@ -109,15 +113,21 @@ def main():
                         help='just print results, don\'t send to telegram')
     args = parser.parse_args()
 
+    # setup loggign
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         level=(logging.DEBUG if args.verbose else logging.INFO))
 
+    # load config
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
+        # pprint(config)
 
-    if not isinstance(config, dict):
-        raise TypeError('invalid config')
+    assert isinstance(config, dict)
+    assert 'servers' in config
+    if not args.no_telegram:
+        assert 'telegram' in config
 
+    # let's go
     results = Results()
     max_threads = math.inf if args.threads_limit == 0 else args.threads_limit
     active_threads = 1
@@ -129,7 +139,7 @@ def main():
         return n
 
     workers = []
-    for name, data in config.items():
+    for name, data in config['servers'].items():
         w = Worker(name, data['host'], data['opened'],
                    concurrency=int(data['concurrency']) if 'concurrency' in data else args.concurrency,
                    timeout=int(data['timeout']) if 'timeout' in data else args.timeout)
@@ -156,7 +166,8 @@ def main():
         results.add(cw)
 
     if results.has_warnings() and not args.no_telegram:
-        results.notify()
+        results.notify(chat_id=config['telegram']['chat-id'],
+                       token=config['telegram']['token'])
 
 
 if __name__ == '__main__':

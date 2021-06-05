@@ -31,18 +31,23 @@ a list of ports expected to be open.
 You can also set per-server `concurrency` and `timeout`.
 
 ```yaml
-server-1:
-  host: 1.2.3.4
-  opened:
-    - 22
-    - 80
-    - 443
+telegram:
+  chat-id: -987
+  token: yourtoken
+  
+servers:
+  server-1:
+    host: 1.2.3.4
+    opened:
+      - 22
+      - 80
+      - 443
 
-server-2:
-  host: 5.6.7.8
-  opened: []
-  concurrency: 1000
-  timeout: 2
+  server-2:
+    host: 5.6.7.8
+    opened: []
+    concurrency: 1000
+    timeout: 2
 ```
 
 ## License
