@@ -84,7 +84,7 @@ class Worker(Thread):
     def run(self):
         logger.info(f'starting {self.name} ({self.concurrency} threads)')
         self.scanner.scan(num_threads=self.concurrency)
-        self.done = True
+        self.done = not self.scanner.failed
         logger.info(f'finished {self.name}')
 
     def get_results(self):

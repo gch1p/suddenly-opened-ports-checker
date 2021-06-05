@@ -22,6 +22,7 @@ class TCPScanner:
         self.timeout = timeout
         self.results = []
         self.q = queue.SimpleQueue()
+        self.failed = False
 
     def scan(self, num_threads=5):
         for port in self.ports:
@@ -36,12 +37,18 @@ class TCPScanner:
         for t in threads:
             t.join()
 
-        return self.results
-
     def run(self):
         try:
             while True:
-                self._scan(self.q.get(block=False))
+                if self.failed:
+                    break
+
+                try:
+                    self._scan(self.q.get(block=False))
+                except Exception as e:
+                    logger.exception(e)
+                    self.failed = True
+                    break
         except queue.Empty:
             return
 
