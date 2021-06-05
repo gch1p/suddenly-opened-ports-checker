@@ -59,7 +59,7 @@ class Results:
         return len(self.warnings) > 0
 
     def notify(self, chat_id=None, token=None):
-        text = '<b>❗️ Attention!</b>\n\n'
+        text = '<b>❗️Attention!</b>\n\n'
         text += '\n'.join(self.warnings)
 
         telegram_notify(text, parse_mode='html', chat_id=chat_id, token=token)
