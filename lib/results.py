@@ -1,8 +1,11 @@
 from threading import Lock
 from lib.util import Colored
 from lib.scanner import PortState
-from ch1p import telegram_notify
 
+try:
+    from ch1p import telegram_notify
+except ModuleNotFoundError:
+    pass
 
 class Results:
     def __init__(self):
